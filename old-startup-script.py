@@ -1,4 +1,5 @@
-"""
+"""Startup Script to control the Light and monitor states.
+
 last update on 20170603
 - defines a motion sensor (PIR)
     - turns on the monitor when a motion is detected
@@ -11,39 +12,28 @@ last update on 20170603
 """
 
 import os
-import sys
 import subprocess
 import time
 from gpiozero import MotionSensor
 
 
-"""
-display configuration
-"""
+# Display configuration
 os.environ['DISPLAY'] = ":0"
 SHUTOFF_DELAY = 180  # seconds
 PIR_PIN = 4  # Pin 7 on the board
 
-"""
-LED strip configuration
-"""
-pin_red = '17'      # reference
-pin_green = '22'    # reference
-pin_blue = '24'     # reference
-rgb = [250, 255, 30]  # color setting [red, green, blue], in a range of 0 to 255
-red = 0             # temp value
-green = 0           # temp value
-blue = 0            # temp value
-subprocess.call('sudo pigpiod', shell=True)  # start pigpio deamon
-
-
-"""
-**main function
-program entrance...
-"""
+# LED strip configuration
+PIN_RED = '17'      # GPIO pin reference (Broadcom)
+PIN_GREEN = '22'    # GPIO pin reference (Broadcom)
+PIN_BLUE = '24'     # GPIO pin reference (Broadcom)
+RGB = [250, 255, 30]  # color setting [red, green, blue], in a range of 0 to 255
+STATE_RED = 0
+STATE_GREEN = 0
+STATE_BLUE = 0
 
 
 def main():
+    """Start main procedure."""
     pir = MotionSensor(PIR_PIN)
     turnDisplay_on()  # initially turn monitor on
     led_on()  # initially turn led strip on
@@ -64,70 +54,64 @@ def main():
                 turnDisplay_off()
                 led_off()
         time.sleep(1)
-        print("debug-info -->", "time left:", SHUTOFF_DELAY -
-              (time.time() - last_motion_time))
-
-
-"""
-**turnDisplay_on() function
-- this function will turn the monitor on
-"""
+        print("debug-info -->", "time left:",
+              SHUTOFF_DELAY - (time.time() - last_motion_time))
 
 
 def turnDisplay_on():
-    print("debug-info -->", "turn ON")
+    """Turn display on.
+
+    Turns on the physical monitor display connected via HDMI interface.
+    """
     subprocess.call('vcgencmd display_power 1', shell=True)
 
 
-"""
-**turnDisplay_off() function
-- this function will turn the monitor off
-"""
-
-
 def turnDisplay_off():
-    print("debug-info -->", "turn OFF")
+    """Turn display off.
+
+    Turns off the physical monitor display connected via HDMI interface.
+    """
     subprocess.call('vcgencmd display_power 0', shell=True)
 
 
-"""
-**led_on() function
-- this function will turn on the LEDs (strip)
-- it will generally be set the values from 0% to 100% of the color specified above
-"""
-
-
 def led_on():
-    global red, green, blue
+    """Turn LEDs on.
+
+    This function will turn on the LEDs (strip).
+    It will gradually be set the values from 0% to 100% of the color specified above.
+    """
+    global STATE_RED, STATE_GREEN, STATE_BLUE
     percentage = 0
     while percentage < 101:
-        red = int(rgb[0] * percentage / 100)
-        green = int(rgb[1] * percentage / 100)
-        blue = int(rgb[2] * percentage / 100)
-        subprocess.call('pigs p ' + pin_red + ' ' + str(red) + ' && pigs p ' + pin_green +
-                        ' ' + str(green) + ' && pigs p ' + pin_blue + ' ' + str(blue), shell=True)
+        STATE_RED = int(RGB[0] * percentage / 100)
+        STATE_GREEN = int(RGB[1] * percentage / 100)
+        STATE_BLUE = int(RGB[2] * percentage / 100)
+        subprocess.call((f'pigs p {PIN_RED} {str(STATE_RED)}'
+                         f' && pigs p {PIN_GREEN} {str(STATE_GREEN)}'
+                         f' && pigs p {PIN_BLUE} {str(STATE_BLUE)}'),
+                        shell=True)
         percentage += 1
 
 
-"""
-**led_off() function
-this function will turn on the LEDs (strip)
-it will generally be set the values from 0% to 100% of the color specified above
-"""
-
-
 def led_off():
-    global red, green, blue
+    """Turn LEDs on.
+
+    This function will turn off the LEDs (strip).
+    It will gradually be set the values from 0% to 100% of the color specified above.
+    """
+    global STATE_RED, STATE_GREEN, STATE_BLUE
     percentage = 100
     while percentage >= 0:
-        red = int(rgb[0] * percentage / 100)
-        green = int(rgb[1] * percentage / 100)
-        blue = int(rgb[2] * percentage / 100)
-        subprocess.call('pigs p ' + pin_red + ' ' + str(red) + ' && pigs p ' + pin_green +
-                        ' ' + str(green) + ' && pigs p ' + pin_blue + ' ' + str(blue), shell=True)
+        STATE_RED = int(RGB[0] * percentage / 100)
+        STATE_GREEN = int(RGB[1] * percentage / 100)
+        STATE_BLUE = int(RGB[2] * percentage / 100)
+        subprocess.call((f'pigs p {PIN_RED} {str(STATE_RED)}'
+                         f' && pigs p {PIN_GREEN} {str(STATE_GREEN)}'
+                         f' && pigs p {PIN_BLUE} {str(STATE_BLUE)}'),
+                        shell=True)
         percentage -= 1
 
 
-if __name__ == '__main__':      # to make main() be called
-    #print("info:","script starting")
+if __name__ == '__main__':
+    subprocess.call('sudo pigpiod', shell=True)  # start pigpio deamon
     main()
